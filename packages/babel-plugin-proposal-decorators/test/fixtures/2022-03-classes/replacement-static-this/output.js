@@ -1,14 +1,12 @@
-var _initClass;
+let _initClass;
 const dec = () => {};
 let _Foo;
 new class extends babelHelpers.identity {
-  static {
-    class Foo {
-      static {
-        [_Foo, _initClass] = babelHelpers.applyDecs2203(this, [], [dec]);
-      }
+  static [class Foo {
+    static {
+      [_Foo, _initClass] = babelHelpers.applyDecs2203R(this, [], [dec]).c;
     }
-  }
+  }];
   field = ((() => {
     this;
   })(), this);

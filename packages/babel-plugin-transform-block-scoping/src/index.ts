@@ -1,15 +1,15 @@
 import { declare } from "@babel/helper-plugin-utils";
-import type { NodePath, Scope, Visitor } from "@babel/traverse";
-import { type PluginPass, types as t, traverse } from "@babel/core";
+import type { NodePath, Scope, Visitor, PluginPass } from "@babel/core";
+import { types as t, traverse } from "@babel/core";
 
 import {
   getLoopBodyBindings,
   getUsageInBody,
   isVarInLoopHead,
   wrapLoopBody,
-} from "./loop";
-import { validateUsage } from "./validation";
-import { annexB33FunctionsVisitor, isVarScope } from "./annex-B_3_3";
+} from "./loop.ts";
+import { validateUsage } from "./validation.ts";
+import { annexB33FunctionsVisitor, isVarScope } from "./annex-B_3_3.ts";
 
 export interface Options {
   tdz?: boolean;
@@ -17,7 +17,7 @@ export interface Options {
 }
 
 export default declare((api, opts: Options) => {
-  api.assertVersion(7);
+  api.assertVersion(REQUIRED_VERSION(7));
 
   const { throwIfClosureRequired = false, tdz: tdzEnabled = false } = opts;
   if (typeof throwIfClosureRequired !== "boolean") {
@@ -39,8 +39,8 @@ export default declare((api, opts: Options) => {
           const headPath = isForStatement
             ? path.get("init")
             : path.isForXStatement()
-            ? path.get("left")
-            : null;
+              ? path.get("left")
+              : null;
 
           let needsBodyWrap = false;
           const markNeedsBodyWrap = () => {
@@ -57,12 +57,11 @@ export default declare((api, opts: Options) => {
           let bodyScope: Scope | null;
           if (body.isBlockStatement()) {
             bodyScope = body.scope;
-
-            const bindings = getLoopBodyBindings(path);
-            for (const binding of bindings) {
-              const { capturedInClosure } = getUsageInBody(binding, path);
-              if (capturedInClosure) markNeedsBodyWrap();
-            }
+          }
+          const bindings = getLoopBodyBindings(path);
+          for (const binding of bindings) {
+            const { capturedInClosure } = getUsageInBody(binding, path);
+            if (capturedInClosure) markNeedsBodyWrap();
           }
 
           const captured: string[] = [];
@@ -71,17 +70,37 @@ export default declare((api, opts: Options) => {
 
           if (headPath && isBlockScoped(headPath.node)) {
             const names = Object.keys(headPath.getBindingIdentifiers());
+            const headScope = headPath.scope;
 
-            for (const name of names) {
+            for (let name of names) {
               if (bodyScope?.hasOwnBinding(name)) continue; // shadowed
 
+              let binding = headScope.getOwnBinding(name);
+              if (!binding) {
+                headScope.crawl();
+                binding = headScope.getOwnBinding(name);
+              }
               const { usages, capturedInClosure, hasConstantViolations } =
-                getUsageInBody(headPath.scope.getOwnBinding(name), path);
+                getUsageInBody(binding, path);
+
+              if (
+                headScope.parent.hasBinding(name) ||
+                headScope.parent.hasGlobal(name)
+              ) {
+                // If the binding is not captured, there is no need
+                // of adding it to the closure param. However, rename
+                // it if it shadows an outer binding, because the
+                // closure will be moved to an outer level.
+                const newName = headScope.generateUid(name);
+                headScope.rename(name, newName);
+                name = newName;
+              }
 
               if (capturedInClosure) {
                 markNeedsBodyWrap();
                 captured.push(name);
               }
+
               if (isForStatement && hasConstantViolations) {
                 updatedBindingsUsages.set(name, usages);
               }
@@ -91,7 +110,7 @@ export default declare((api, opts: Options) => {
           if (needsBodyWrap) {
             const varPath = wrapLoopBody(path, captured, updatedBindingsUsages);
 
-            if (headPath?.isVariableDeclaration<t.Node>()) {
+            if (headPath?.isVariableDeclaration()) {
               // If we wrap the loop body, we transform the var
               // declaration in the loop head now, to avoid
               // invalid references that break other plugins:
@@ -169,7 +188,9 @@ function transformBlockScopedVariable(
 
   const bindingNames = Object.keys(path.getBindingIdentifiers());
   for (const name of bindingNames) {
-    path.scope.getOwnBinding(name).kind = "var";
+    const binding = path.scope.getOwnBinding(name);
+    if (!binding) continue;
+    binding.kind = "var";
   }
 
   if (
@@ -186,12 +207,8 @@ function transformBlockScopedVariable(
   }
 
   const blockScope = path.scope;
-  let varScope = blockScope.getFunctionParent();
-  let isProgramScope = false;
-  if (!varScope) {
-    varScope = blockScope.getProgramParent();
-    isProgramScope = true;
-  }
+  const varScope =
+    blockScope.getFunctionParent() || blockScope.getProgramParent();
 
   if (varScope !== blockScope) {
     for (const name of bindingNames) {
@@ -202,8 +219,7 @@ function transformBlockScopedVariable(
         // a nested scope and thus we don't need to assume that it
         // may be declared (but not registered yet) in an upper one.
         blockScope.parent.hasBinding(name, { noUids: true }) ||
-        blockScope.parent.hasGlobal(name) ||
-        (isProgramScope && varScope.hasGlobal(name))
+        blockScope.parent.hasGlobal(name)
       ) {
         newName = blockScope.generateUid(name);
         blockScope.rename(name, newName);

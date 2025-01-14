@@ -17,7 +17,7 @@
         },
         "extends": [
           {
-            "type": "TSExpressionWithTypeArguments",
+            "type": "TSInterfaceHeritage",
             "start":20,"end":24,"loc":{"start":{"line":1,"column":20,"index":20},"end":{"line":1,"column":24,"index":24}},
             "expression": {
               "type": "TSQualifiedName",
@@ -69,6 +69,9 @@
         }
       }
     ],
-    "directives": []
+    "directives": [],
+    "extra": {
+      "topLevelAwait": false
+    }
   }
 }

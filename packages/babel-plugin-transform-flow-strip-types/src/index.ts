@@ -1,7 +1,6 @@
 import { declare } from "@babel/helper-plugin-utils";
 import syntaxFlow from "@babel/plugin-syntax-flow";
-import { types as t } from "@babel/core";
-import type { NodePath } from "@babel/traverse";
+import { types as t, type NodePath } from "@babel/core";
 
 export interface Options {
   requireDirective?: boolean;
@@ -9,9 +8,9 @@ export interface Options {
 }
 
 export default declare((api, opts: Options) => {
-  api.assertVersion(7);
+  api.assertVersion(REQUIRED_VERSION(7));
 
-  const FLOW_DIRECTIVE = /(@flow(\s+(strict(-local)?|weak))?|@noflow)/;
+  const FLOW_DIRECTIVE = /@flow(?:\s+(?:strict(?:-local)?|weak))?|@noflow/;
 
   let skipStrip = false;
 
@@ -136,9 +135,9 @@ export default declare((api, opts: Options) => {
 
       AssignmentPattern({ node }) {
         if (skipStrip) return;
-        // @ts-expect-error optional is not in ObjectPattern
+        // @ts-expect-error optional is not in TSAsExpression
         if (node.left.optional) {
-          // @ts-expect-error optional is not in ObjectPattern
+          // @ts-expect-error optional is not in TSAsExpression
           node.left.optional = false;
         }
       },
@@ -159,9 +158,9 @@ export default declare((api, opts: Options) => {
             // must not be a MemberExpression
             param = param.left;
           }
-          // @ts-expect-error optional is not in ObjectPattern
+          // @ts-expect-error optional is not in TSAsExpression
           if (param.optional) {
-            // @ts-expect-error optional is not in ObjectPattern
+            // @ts-expect-error optional is not in TSAsExpression
             param.optional = false;
           }
         }
@@ -182,6 +181,11 @@ export default declare((api, opts: Options) => {
       },
 
       CallExpression({ node }) {
+        if (skipStrip) return;
+        node.typeArguments = null;
+      },
+
+      JSXOpeningElement({ node }) {
         if (skipStrip) return;
         node.typeArguments = null;
       },

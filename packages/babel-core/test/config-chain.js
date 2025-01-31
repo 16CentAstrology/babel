@@ -4,11 +4,16 @@ import path from "path";
 import { fileURLToPath } from "url";
 import * as babel from "../lib/index.js";
 import rimraf from "rimraf";
+import { itBabel7, itBabel8, itGte, itLt } from "$repo-utils";
 
 import _getTargets from "@babel/helper-compilation-targets";
 const getTargets = _getTargets.default || _getTargets;
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// "minNodeVersion": "22.0.0" <-- For Ctrl+F when dropping node 20
+const nodeGte22_12 = itGte("22.12.0");
+const nodeLt22_12 = itLt("22.12.0");
 
 import { isMJS, loadOptionsAsync, skipUnsupportedESM } from "./helpers/esm.js";
 
@@ -51,8 +56,8 @@ function fixture(...args) {
   return path.join(dirname, "fixtures", "config", ...args);
 }
 
-function loadOptions(opts) {
-  return babel.loadOptions({ cwd: dirname, ...opts });
+function loadOptionsSync(opts) {
+  return babel.loadOptionsSync({ cwd: dirname, ...opts });
 }
 
 function pairs(items) {
@@ -91,11 +96,11 @@ describe("buildConfigChain", function () {
   describe("test", () => {
     describe("single", () => {
       it("should process matching string values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          test: fixture("nonexistant-fake"),
+          test: fixture("nonexistent-fake"),
           comments: true,
         });
 
@@ -103,11 +108,11 @@ describe("buildConfigChain", function () {
       });
 
       it("should process matching RegExp values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          test: new RegExp(escapeRegExp(fixture("nonexistant-fake"))),
+          test: new RegExp(escapeRegExp(fixture("nonexistent-fake"))),
           comments: true,
         });
 
@@ -115,11 +120,11 @@ describe("buildConfigChain", function () {
       });
 
       it("should process matching function values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          test: p => p.indexOf(fixture("nonexistant-fake")) === 0,
+          test: p => p.indexOf(fixture("nonexistent-fake")) === 0,
           comments: true,
         });
 
@@ -127,11 +132,11 @@ describe("buildConfigChain", function () {
       });
 
       it("should process non-matching string values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          test: fixture("nonexistant-fake-unknown"),
+          test: fixture("nonexistent-fake-unknown"),
           comments: true,
         });
 
@@ -139,11 +144,11 @@ describe("buildConfigChain", function () {
       });
 
       it("should process non-matching RegExp values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          test: new RegExp(escapeRegExp(fixture("nonexistant-unknown"))),
+          test: new RegExp(escapeRegExp(fixture("nonexistent-unknown"))),
           comments: true,
         });
 
@@ -151,11 +156,11 @@ describe("buildConfigChain", function () {
       });
 
       it("should process non-matching function values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          test: p => p.indexOf(fixture("nonexistant-unknown")) === 0,
+          test: p => p.indexOf(fixture("nonexistent-unknown")) === 0,
           comments: true,
         });
 
@@ -165,11 +170,11 @@ describe("buildConfigChain", function () {
 
     describe("array", () => {
       it("should process matching string values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          test: [fixture("nonexistant-fake")],
+          test: [fixture("nonexistent-fake")],
           comments: true,
         });
 
@@ -177,11 +182,11 @@ describe("buildConfigChain", function () {
       });
 
       it("should process matching RegExp values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          test: [new RegExp(escapeRegExp(fixture("nonexistant-fake")))],
+          test: [new RegExp(escapeRegExp(fixture("nonexistent-fake")))],
           comments: true,
         });
 
@@ -189,11 +194,11 @@ describe("buildConfigChain", function () {
       });
 
       it("should process matching function values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          test: [p => p.indexOf(fixture("nonexistant-fake")) === 0],
+          test: [p => p.indexOf(fixture("nonexistent-fake")) === 0],
           comments: true,
         });
 
@@ -201,11 +206,11 @@ describe("buildConfigChain", function () {
       });
 
       it("should process non-matching string values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          test: [fixture("nonexistant-fake-unknown")],
+          test: [fixture("nonexistent-fake-unknown")],
           comments: true,
         });
 
@@ -213,11 +218,11 @@ describe("buildConfigChain", function () {
       });
 
       it("should process non-matching RegExp values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          test: [new RegExp(escapeRegExp(fixture("nonexistant-unknown")))],
+          test: [new RegExp(escapeRegExp(fixture("nonexistent-unknown")))],
           comments: true,
         });
 
@@ -225,11 +230,11 @@ describe("buildConfigChain", function () {
       });
 
       it("should process non-matching function values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          test: [p => p.indexOf(fixture("nonexistant-unknown")) === 0],
+          test: [p => p.indexOf(fixture("nonexistent-unknown")) === 0],
           comments: true,
         });
 
@@ -239,7 +244,7 @@ describe("buildConfigChain", function () {
 
     describe("filename requirement", () => {
       const BASE_OPTS = {
-        cwd: fixture("nonexistant-fake"),
+        cwd: fixture("nonexistent-fake"),
         babelrc: false,
         configFile: false,
       };
@@ -247,16 +252,16 @@ describe("buildConfigChain", function () {
       describe("in config", () => {
         it("requires filename if string", () => {
           expect(() =>
-            loadOptions({
+            loadOptionsSync({
               ...BASE_OPTS,
-              test: fixture("nonexistant-fake"),
+              test: fixture("nonexistent-fake"),
             }),
           ).toThrow(/no filename was passed/);
         });
 
         it("requires filename if RegExp", () => {
           expect(() =>
-            loadOptions({
+            loadOptionsSync({
               ...BASE_OPTS,
               test: /file/,
             }),
@@ -267,7 +272,7 @@ describe("buildConfigChain", function () {
           const mock = jest.fn().mockReturnValue(true);
 
           expect(() =>
-            loadOptions({
+            loadOptionsSync({
               ...BASE_OPTS,
               test: mock,
             }),
@@ -275,7 +280,7 @@ describe("buildConfigChain", function () {
           expect(mock).toHaveBeenCalledWith(undefined, expect.anything());
 
           expect(() =>
-            loadOptions({
+            loadOptionsSync({
               ...BASE_OPTS,
               filename: "some-filename",
               test: mock,
@@ -288,16 +293,16 @@ describe("buildConfigChain", function () {
       describe("in preset", () => {
         it("requires filename if string", () => {
           expect(() =>
-            loadOptions({
+            loadOptionsSync({
               ...BASE_OPTS,
-              presets: [() => ({ test: fixture("nonexistant-fake") })],
+              presets: [() => ({ test: fixture("nonexistent-fake") })],
             }),
           ).toThrow(/requires a filename/);
         });
 
         it("requires filename if RegExp", () => {
           expect(() =>
-            loadOptions({
+            loadOptionsSync({
               ...BASE_OPTS,
               presets: [() => ({ test: /file/ })],
             }),
@@ -308,7 +313,7 @@ describe("buildConfigChain", function () {
           const mock = jest.fn().mockReturnValue(true);
 
           expect(() =>
-            loadOptions({
+            loadOptionsSync({
               ...BASE_OPTS,
               presets: [() => ({ test: mock })],
             }),
@@ -316,7 +321,7 @@ describe("buildConfigChain", function () {
           expect(mock).toHaveBeenCalledWith(undefined, expect.anything());
 
           expect(() =>
-            loadOptions({
+            loadOptionsSync({
               ...BASE_OPTS,
               filename: "some-filename",
               presets: [() => ({ test: mock })],
@@ -331,11 +336,11 @@ describe("buildConfigChain", function () {
   describe("include", () => {
     describe("single", () => {
       it("should process matching string values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          include: fixture("nonexistant-fake"),
+          include: fixture("nonexistent-fake"),
           comments: true,
         });
 
@@ -343,11 +348,11 @@ describe("buildConfigChain", function () {
       });
 
       it("should process matching RegExp values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          include: new RegExp(escapeRegExp(fixture("nonexistant-fake"))),
+          include: new RegExp(escapeRegExp(fixture("nonexistent-fake"))),
           comments: true,
         });
 
@@ -355,11 +360,11 @@ describe("buildConfigChain", function () {
       });
 
       it("should process matching function values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          include: p => p.indexOf(fixture("nonexistant-fake")) === 0,
+          include: p => p.indexOf(fixture("nonexistent-fake")) === 0,
           comments: true,
         });
 
@@ -367,11 +372,11 @@ describe("buildConfigChain", function () {
       });
 
       it("should process non-matching string values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          include: fixture("nonexistant-fake-unknown"),
+          include: fixture("nonexistent-fake-unknown"),
           comments: true,
         });
 
@@ -379,11 +384,11 @@ describe("buildConfigChain", function () {
       });
 
       it("should process non-matching RegExp values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          include: new RegExp(escapeRegExp(fixture("nonexistant-unknown"))),
+          include: new RegExp(escapeRegExp(fixture("nonexistent-unknown"))),
           comments: true,
         });
 
@@ -391,11 +396,11 @@ describe("buildConfigChain", function () {
       });
 
       it("should process non-matching function values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          include: p => p.indexOf(fixture("nonexistant-unknown")) === 0,
+          include: p => p.indexOf(fixture("nonexistent-unknown")) === 0,
           comments: true,
         });
 
@@ -405,11 +410,11 @@ describe("buildConfigChain", function () {
 
     describe("array", () => {
       it("should process matching string values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          include: [fixture("nonexistant-fake")],
+          include: [fixture("nonexistent-fake")],
           comments: true,
         });
 
@@ -417,11 +422,11 @@ describe("buildConfigChain", function () {
       });
 
       it("should process matching RegExp values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          include: [new RegExp(escapeRegExp(fixture("nonexistant-fake")))],
+          include: [new RegExp(escapeRegExp(fixture("nonexistent-fake")))],
           comments: true,
         });
 
@@ -429,11 +434,11 @@ describe("buildConfigChain", function () {
       });
 
       it("should process matching function values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          include: [p => p.indexOf(fixture("nonexistant-fake")) === 0],
+          include: [p => p.indexOf(fixture("nonexistent-fake")) === 0],
           comments: true,
         });
 
@@ -441,11 +446,11 @@ describe("buildConfigChain", function () {
       });
 
       it("should process non-matching string values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          include: [fixture("nonexistant-fake-unknown")],
+          include: [fixture("nonexistent-fake-unknown")],
           comments: true,
         });
 
@@ -453,11 +458,11 @@ describe("buildConfigChain", function () {
       });
 
       it("should process non-matching RegExp values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          include: [new RegExp(escapeRegExp(fixture("nonexistant-unknown")))],
+          include: [new RegExp(escapeRegExp(fixture("nonexistent-unknown")))],
           comments: true,
         });
 
@@ -465,11 +470,11 @@ describe("buildConfigChain", function () {
       });
 
       it("should process non-matching function values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          include: [p => p.indexOf(fixture("nonexistant-unknown")) === 0],
+          include: [p => p.indexOf(fixture("nonexistent-unknown")) === 0],
           comments: true,
         });
 
@@ -481,11 +486,11 @@ describe("buildConfigChain", function () {
   describe("exclude", () => {
     describe("single", () => {
       it("should process matching string values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          exclude: fixture("nonexistant-fake"),
+          exclude: fixture("nonexistent-fake"),
           comments: true,
         });
 
@@ -493,11 +498,11 @@ describe("buildConfigChain", function () {
       });
 
       it("should process matching RegExp values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          exclude: new RegExp(escapeRegExp(fixture("nonexistant-fake"))),
+          exclude: new RegExp(escapeRegExp(fixture("nonexistent-fake"))),
           comments: true,
         });
 
@@ -505,11 +510,11 @@ describe("buildConfigChain", function () {
       });
 
       it("should process matching function values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          exclude: p => p.indexOf(fixture("nonexistant-fake")) === 0,
+          exclude: p => p.indexOf(fixture("nonexistent-fake")) === 0,
           comments: true,
         });
 
@@ -517,11 +522,11 @@ describe("buildConfigChain", function () {
       });
 
       it("should process non-matching string values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          exclude: fixture("nonexistant-fake-unknown"),
+          exclude: fixture("nonexistent-fake-unknown"),
           comments: true,
         });
 
@@ -529,11 +534,11 @@ describe("buildConfigChain", function () {
       });
 
       it("should process non-matching RegExp values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          exclude: new RegExp(escapeRegExp(fixture("nonexistant-unknown"))),
+          exclude: new RegExp(escapeRegExp(fixture("nonexistent-unknown"))),
           comments: true,
         });
 
@@ -541,11 +546,11 @@ describe("buildConfigChain", function () {
       });
 
       it("should process non-matching function values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          exclude: p => p.indexOf(fixture("nonexistant-unknown")) === 0,
+          exclude: p => p.indexOf(fixture("nonexistent-unknown")) === 0,
           comments: true,
         });
 
@@ -555,11 +560,11 @@ describe("buildConfigChain", function () {
 
     describe("array", () => {
       it("should process matching string values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          exclude: [fixture("nonexistant-fake")],
+          exclude: [fixture("nonexistent-fake")],
           comments: true,
         });
 
@@ -567,11 +572,11 @@ describe("buildConfigChain", function () {
       });
 
       it("should process matching RegExp values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          exclude: [new RegExp(escapeRegExp(fixture("nonexistant-fake")))],
+          exclude: [new RegExp(escapeRegExp(fixture("nonexistent-fake")))],
           comments: true,
         });
 
@@ -579,11 +584,11 @@ describe("buildConfigChain", function () {
       });
 
       it("should process matching function values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          exclude: [p => p.indexOf(fixture("nonexistant-fake")) === 0],
+          exclude: [p => p.indexOf(fixture("nonexistent-fake")) === 0],
           comments: true,
         });
 
@@ -591,11 +596,11 @@ describe("buildConfigChain", function () {
       });
 
       it("should process non-matching string values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          exclude: [fixture("nonexistant-fake-unknown")],
+          exclude: [fixture("nonexistent-fake-unknown")],
           comments: true,
         });
 
@@ -603,11 +608,11 @@ describe("buildConfigChain", function () {
       });
 
       it("should process non-matching RegExp values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          exclude: [new RegExp(escapeRegExp(fixture("nonexistant-unknown")))],
+          exclude: [new RegExp(escapeRegExp(fixture("nonexistent-unknown")))],
           comments: true,
         });
 
@@ -615,11 +620,11 @@ describe("buildConfigChain", function () {
       });
 
       it("should process non-matching function values", () => {
-        const opts = loadOptions({
-          cwd: fixture("nonexistant-fake"),
-          filename: fixture("nonexistant-fake", "src.js"),
+        const opts = loadOptionsSync({
+          cwd: fixture("nonexistent-fake"),
+          filename: fixture("nonexistent-fake", "src.js"),
           babelrc: false,
-          exclude: [p => p.indexOf(fixture("nonexistant-unknown")) === 0],
+          exclude: [p => p.indexOf(fixture("nonexistent-unknown")) === 0],
           comments: true,
         });
 
@@ -630,17 +635,17 @@ describe("buildConfigChain", function () {
 
   describe("ignore", () => {
     it("should ignore files that match", () => {
-      const opts = loadOptions({
-        cwd: fixture("nonexistant-fake"),
-        filename: fixture("nonexistant-fake", "src.js"),
+      const opts = loadOptionsSync({
+        cwd: fixture("nonexistent-fake"),
+        filename: fixture("nonexistent-fake", "src.js"),
         babelrc: false,
         ignore: [
-          fixture("nonexistant-fake", "src.js"),
+          fixture("nonexistent-fake", "src.js"),
 
           // We had a regression where multiple ignore patterns broke things, so
           // we keep some extra random items in here.
-          fixture("nonexistant-fake", "other.js"),
-          fixture("nonexistant-fake", "misc.js"),
+          fixture("nonexistent-fake", "other.js"),
+          fixture("nonexistent-fake", "misc.js"),
         ],
       });
 
@@ -648,13 +653,13 @@ describe("buildConfigChain", function () {
     });
 
     it("should not ignore files that don't match", () => {
-      const opts = loadOptions({
-        cwd: fixture("nonexistant-fake"),
-        filename: fixture("nonexistant-fake", "src.js"),
+      const opts = loadOptionsSync({
+        cwd: fixture("nonexistent-fake"),
+        filename: fixture("nonexistent-fake", "src.js"),
         babelrc: false,
         ignore: [
-          fixture("nonexistant-fake", "other.js"),
-          fixture("nonexistant-fake", "misc.js"),
+          fixture("nonexistent-fake", "other.js"),
+          fixture("nonexistent-fake", "misc.js"),
         ],
       });
 
@@ -664,13 +669,13 @@ describe("buildConfigChain", function () {
 
   describe("only", () => {
     it("should ignore files that don't match", () => {
-      const opts = loadOptions({
-        cwd: fixture("nonexistant-fake"),
-        filename: fixture("nonexistant-fake", "src.js"),
+      const opts = loadOptionsSync({
+        cwd: fixture("nonexistent-fake"),
+        filename: fixture("nonexistent-fake", "src.js"),
         babelrc: false,
         only: [
-          fixture("nonexistant-fake", "other.js"),
-          fixture("nonexistant-fake", "misc.js"),
+          fixture("nonexistent-fake", "other.js"),
+          fixture("nonexistent-fake", "misc.js"),
         ],
       });
 
@@ -678,13 +683,13 @@ describe("buildConfigChain", function () {
     });
 
     it("should not ignore files that match", () => {
-      const opts = loadOptions({
-        cwd: fixture("nonexistant-fake"),
-        filename: fixture("nonexistant-fake", "src.js"),
+      const opts = loadOptionsSync({
+        cwd: fixture("nonexistent-fake"),
+        filename: fixture("nonexistent-fake", "src.js"),
         babelrc: false,
         only: [
-          fixture("nonexistant-fake", "src.js"),
-          fixture("nonexistant-fake", "misc.js"),
+          fixture("nonexistent-fake", "src.js"),
+          fixture("nonexistent-fake", "misc.js"),
         ],
       });
 
@@ -694,11 +699,11 @@ describe("buildConfigChain", function () {
 
   describe("ignore/only", () => {
     it("should ignore files that match ignore and don't match only", () => {
-      const opts = loadOptions({
-        cwd: fixture("nonexistant-fake"),
-        filename: fixture("nonexistant-fake", "src.js"),
+      const opts = loadOptionsSync({
+        cwd: fixture("nonexistent-fake"),
+        filename: fixture("nonexistent-fake", "src.js"),
         babelrc: false,
-        ignore: [fixture("nonexistant-fake", "src.js")],
+        ignore: [fixture("nonexistent-fake", "src.js")],
         only: [],
       });
 
@@ -706,32 +711,32 @@ describe("buildConfigChain", function () {
     });
 
     it("should ignore files that match ignore and also only", () => {
-      const opts = loadOptions({
-        cwd: fixture("nonexistant-fake"),
-        filename: fixture("nonexistant-fake", "src.js"),
+      const opts = loadOptionsSync({
+        cwd: fixture("nonexistent-fake"),
+        filename: fixture("nonexistent-fake", "src.js"),
         babelrc: false,
-        ignore: [fixture("nonexistant-fake", "src.js")],
-        only: [fixture("nonexistant-fake", "src.js")],
+        ignore: [fixture("nonexistent-fake", "src.js")],
+        only: [fixture("nonexistent-fake", "src.js")],
       });
 
       expect(opts).toBeNull();
     });
 
     it("should not ignore files that match only and not ignore", () => {
-      const opts = loadOptions({
-        cwd: fixture("nonexistant-fake"),
-        filename: fixture("nonexistant-fake", "src.js"),
+      const opts = loadOptionsSync({
+        cwd: fixture("nonexistent-fake"),
+        filename: fixture("nonexistent-fake", "src.js"),
         babelrc: false,
-        only: [fixture("nonexistant-fake", "src.js")],
+        only: [fixture("nonexistent-fake", "src.js")],
       });
 
       expect(opts).not.toBeNull();
     });
 
     it("should not ignore files when no ignore/only are specified", () => {
-      const opts = loadOptions({
-        cwd: fixture("nonexistant-fake"),
-        filename: fixture("nonexistant-fake", "src.js"),
+      const opts = loadOptionsSync({
+        cwd: fixture("nonexistent-fake"),
+        filename: fixture("nonexistent-fake", "src.js"),
         babelrc: false,
       });
 
@@ -739,71 +744,71 @@ describe("buildConfigChain", function () {
     });
 
     it("should allow negation of only", () => {
-      const opts1 = loadOptions({
-        cwd: fixture("nonexistant-fake"),
-        filename: fixture("nonexistant-fake", "src.js"),
+      const opts1 = loadOptionsSync({
+        cwd: fixture("nonexistent-fake"),
+        filename: fixture("nonexistent-fake", "src.js"),
         babelrc: false,
         only: [
-          "!" + fixture("nonexistant-fake"),
-          fixture("nonexistant-fake", "other.js"),
+          "!" + fixture("nonexistent-fake"),
+          fixture("nonexistent-fake", "other.js"),
         ],
       });
       expect(opts1).toBeNull();
 
-      const opts2 = loadOptions({
-        cwd: fixture("nonexistant-fake"),
-        filename: fixture("nonexistant-fake", "src.js"),
+      const opts2 = loadOptionsSync({
+        cwd: fixture("nonexistent-fake"),
+        filename: fixture("nonexistent-fake", "src.js"),
         babelrc: false,
         only: [
-          "!" + fixture("nonexistant-fake"),
-          fixture("nonexistant-fake", "src.js"),
+          "!" + fixture("nonexistent-fake"),
+          fixture("nonexistent-fake", "src.js"),
         ],
       });
       expect(opts2).not.toBeNull();
 
-      const opts3 = loadOptions({
-        cwd: fixture("nonexistant-fake"),
-        filename: fixture("nonexistant-fake", "folder", "src.js"),
+      const opts3 = loadOptionsSync({
+        cwd: fixture("nonexistent-fake"),
+        filename: fixture("nonexistent-fake", "folder", "src.js"),
         babelrc: false,
         only: [
-          "!" + fixture("nonexistant-fake"),
-          fixture("nonexistant-fake", "folder"),
+          "!" + fixture("nonexistent-fake"),
+          fixture("nonexistent-fake", "folder"),
         ],
       });
       expect(opts3).not.toBeNull();
     });
 
     it("should allow negation of ignore", () => {
-      const opts1 = loadOptions({
-        cwd: fixture("nonexistant-fake"),
-        filename: fixture("nonexistant-fake", "src.js"),
+      const opts1 = loadOptionsSync({
+        cwd: fixture("nonexistent-fake"),
+        filename: fixture("nonexistent-fake", "src.js"),
         babelrc: false,
         ignore: [
-          "!" + fixture("nonexistant-fake", "other.js"),
-          fixture("nonexistant-fake"),
+          "!" + fixture("nonexistent-fake", "other.js"),
+          fixture("nonexistent-fake"),
         ],
       });
       expect(opts1).toBeNull();
 
       // Tests disabled pending https://github.com/babel/babel/issues/6907
-      // const opts2 = loadOptions({
-      //   cwd: fixture("nonexistant-fake"),
-      //   filename: fixture("nonexistant-fake", "src.js"),
+      // const opts2 = loadOptionsSync({
+      //   cwd: fixture("nonexistent-fake"),
+      //   filename: fixture("nonexistent-fake", "src.js"),
       //   babelrc: false,
       //   ignore: [
-      //     "!" + fixture("nonexistant-fake", "src.js"),
-      //     fixture("nonexistant-fake"),
+      //     "!" + fixture("nonexistent-fake", "src.js"),
+      //     fixture("nonexistent-fake"),
       //   ],
       // });
       // expect(opts2).not.toBeNull();
       //
-      // const opts3 = loadOptions({
-      //   cwd: fixture("nonexistant-fake"),
-      //   filename: fixture("nonexistant-fake", "folder", "src.js"),
+      // const opts3 = loadOptionsSync({
+      //   cwd: fixture("nonexistent-fake"),
+      //   filename: fixture("nonexistent-fake", "folder", "src.js"),
       //   babelrc: false,
       //   ignore: [
-      //     "!" + fixture("nonexistant-fake", "folder"),
-      //     fixture("nonexistant-fake"),
+      //     "!" + fixture("nonexistent-fake", "folder"),
+      //     fixture("nonexistent-fake"),
       //   ],
       // });
       // expect(opts3).not.toBeNull();
@@ -818,10 +823,10 @@ describe("buildConfigChain", function () {
       it("should not cache the input options by identity", () => {
         const inputOpts = { plugins: plugins1 };
 
-        const opts1 = loadOptions(inputOpts);
+        const opts1 = loadOptionsSync(inputOpts);
 
         inputOpts.plugins = plugins2;
-        const opts2 = loadOptions(inputOpts);
+        const opts2 = loadOptionsSync(inputOpts);
 
         expect(opts1.plugins).toHaveLength(1);
         expect(opts2.plugins).toHaveLength(1);
@@ -831,7 +836,7 @@ describe("buildConfigChain", function () {
       it("should cache the env plugins by identity", () => {
         const plugins = [() => ({})];
 
-        const opts1 = loadOptions({
+        const opts1 = loadOptionsSync({
           envName: "foo",
           env: {
             foo: {
@@ -839,7 +844,7 @@ describe("buildConfigChain", function () {
             },
           },
         });
-        const opts2 = loadOptions({
+        const opts2 = loadOptionsSync({
           envName: "foo",
           env: {
             foo: {
@@ -856,7 +861,7 @@ describe("buildConfigChain", function () {
       it("should cache the env presets by identity", () => {
         const presets = [() => ({ plugins: [() => ({})] })];
 
-        const opts1 = loadOptions({
+        const opts1 = loadOptionsSync({
           envName: "foo",
           env: {
             foo: {
@@ -864,7 +869,7 @@ describe("buildConfigChain", function () {
             },
           },
         });
-        const opts2 = loadOptions({
+        const opts2 = loadOptionsSync({
           envName: "foo",
           env: {
             foo: {
@@ -881,8 +886,8 @@ describe("buildConfigChain", function () {
       it("should cache the plugin options by identity", () => {
         const plugins = [() => ({})];
 
-        const opts1 = loadOptions({ plugins });
-        const opts2 = loadOptions({ plugins });
+        const opts1 = loadOptionsSync({ plugins });
+        const opts2 = loadOptionsSync({ plugins });
 
         expect(opts1.plugins).toHaveLength(1);
         expect(opts2.plugins).toHaveLength(1);
@@ -892,8 +897,8 @@ describe("buildConfigChain", function () {
       it("should cache the presets options by identity", () => {
         const presets = [() => ({ plugins: [() => ({})] })];
 
-        const opts1 = loadOptions({ presets });
-        const opts2 = loadOptions({ presets });
+        const opts1 = loadOptionsSync({ presets });
+        const opts2 = loadOptionsSync({ presets });
 
         expect(opts1.plugins).toHaveLength(1);
         expect(opts2.plugins).toHaveLength(1);
@@ -903,9 +908,9 @@ describe("buildConfigChain", function () {
       it("should not cache the presets options with passPerPreset", () => {
         const presets = [() => ({ plugins: [() => ({})] })];
 
-        const opts1 = loadOptions({ presets });
-        const opts2 = loadOptions({ presets, passPerPreset: true });
-        const opts3 = loadOptions({ presets, passPerPreset: false });
+        const opts1 = loadOptionsSync({ presets });
+        const opts2 = loadOptionsSync({ presets, passPerPreset: true });
+        const opts3 = loadOptionsSync({ presets, passPerPreset: false });
 
         expect(opts1.plugins).toHaveLength(1);
         expect(opts2.plugins).toHaveLength(0);
@@ -939,13 +944,25 @@ describe("buildConfigChain", function () {
           "package.json",
         );
 
-        const opts1 = loadOptions({ filename, cwd: path.dirname(filename) });
-        const opts2 = loadOptions({ filename, cwd: path.dirname(filename) });
+        const opts1 = loadOptionsSync({
+          filename,
+          cwd: path.dirname(filename),
+        });
+        const opts2 = loadOptionsSync({
+          filename,
+          cwd: path.dirname(filename),
+        });
 
         touch(pkgJSON);
 
-        const opts3 = loadOptions({ filename, cwd: path.dirname(filename) });
-        const opts4 = loadOptions({ filename, cwd: path.dirname(filename) });
+        const opts3 = loadOptionsSync({
+          filename,
+          cwd: path.dirname(filename),
+        });
+        const opts4 = loadOptionsSync({
+          filename,
+          cwd: path.dirname(filename),
+        });
 
         expect(opts1.plugins).toHaveLength(1);
         expect(opts2.plugins).toHaveLength(1);
@@ -973,13 +990,25 @@ describe("buildConfigChain", function () {
           ".babelrc",
         );
 
-        const opts1 = loadOptions({ filename, cwd: path.dirname(filename) });
-        const opts2 = loadOptions({ filename, cwd: path.dirname(filename) });
+        const opts1 = loadOptionsSync({
+          filename,
+          cwd: path.dirname(filename),
+        });
+        const opts2 = loadOptionsSync({
+          filename,
+          cwd: path.dirname(filename),
+        });
 
         touch(babelrcFile);
 
-        const opts3 = loadOptions({ filename, cwd: path.dirname(filename) });
-        const opts4 = loadOptions({ filename, cwd: path.dirname(filename) });
+        const opts3 = loadOptionsSync({
+          filename,
+          cwd: path.dirname(filename),
+        });
+        const opts4 = loadOptionsSync({
+          filename,
+          cwd: path.dirname(filename),
+        });
 
         expect(opts1.plugins).toHaveLength(1);
         expect(opts2.plugins).toHaveLength(1);
@@ -1001,15 +1030,21 @@ describe("buildConfigChain", function () {
           "src.js",
         );
 
-        const opts1 = loadOptions({ filename, cwd: path.dirname(filename) });
-        const opts2 = loadOptions({ filename, cwd: path.dirname(filename) });
+        const opts1 = loadOptionsSync({
+          filename,
+          cwd: path.dirname(filename),
+        });
+        const opts2 = loadOptionsSync({
+          filename,
+          cwd: path.dirname(filename),
+        });
 
-        const opts3 = loadOptions({
+        const opts3 = loadOptionsSync({
           filename,
           envName: "new-env",
           cwd: path.dirname(filename),
         });
-        const opts4 = loadOptions({
+        const opts4 = loadOptionsSync({
           filename,
           envName: "new-env",
           cwd: path.dirname(filename),
@@ -1031,14 +1066,14 @@ describe("buildConfigChain", function () {
 
   describe("overrides merging", () => {
     it("should apply matching overrides over base configs", () => {
-      const opts = loadOptions({
-        cwd: fixture("nonexistant-fake"),
-        filename: fixture("nonexistant-fake", "src.js"),
+      const opts = loadOptionsSync({
+        cwd: fixture("nonexistent-fake"),
+        filename: fixture("nonexistent-fake", "src.js"),
         babelrc: false,
         comments: true,
         overrides: [
           {
-            test: fixture("nonexistant-fake"),
+            test: fixture("nonexistent-fake"),
             comments: false,
           },
         ],
@@ -1048,14 +1083,14 @@ describe("buildConfigChain", function () {
     });
 
     it("should not apply non-matching overrides over base configs", () => {
-      const opts = loadOptions({
-        cwd: fixture("nonexistant-fake"),
-        filename: fixture("nonexistant-fake", "src.js"),
+      const opts = loadOptionsSync({
+        cwd: fixture("nonexistent-fake"),
+        filename: fixture("nonexistent-fake", "src.js"),
         babelrc: false,
         comments: true,
         overrides: [
           {
-            test: fixture("nonexistant-unknown"),
+            test: fixture("nonexistent-unknown"),
             comments: false,
           },
         ],
@@ -1065,9 +1100,9 @@ describe("buildConfigChain", function () {
     });
 
     it("should remove the overrides and filtering fields from the options", () => {
-      const opts = loadOptions({
-        cwd: fixture("nonexistant-fake"),
-        filename: fixture("nonexistant-fake", "src.js"),
+      const opts = loadOptionsSync({
+        cwd: fixture("nonexistent-fake"),
+        filename: fixture("nonexistent-fake", "src.js"),
         babelrc: false,
         overrides: [],
         test: /^/,
@@ -1124,7 +1159,7 @@ describe("buildConfigChain", function () {
 
           await config(name);
 
-          expect(loadOptions({ filename, cwd })).toEqual({
+          expect(loadOptionsSync({ filename, cwd })).toEqual({
             ...getDefaults(),
             filename,
             cwd,
@@ -1134,7 +1169,23 @@ describe("buildConfigChain", function () {
         },
       );
 
-      test("should not load babel.config.mjs synchronously", async () => {
+      nodeLt22_12(
+        "should not load babel.config.mjs synchronously",
+        async () => {
+          const { cwd, tmp, config } = await getTemp(
+            "babel-test-load-config-sync-babel.config.mjs",
+          );
+          const filename = tmp("src.js");
+
+          await config("babel.config.mjs");
+
+          expect(() => loadOptionsSync({ filename, cwd })).toThrow(
+            /is only supported when running Babel asynchronously/,
+          );
+        },
+      );
+
+      nodeGte22_12("should load babel.config.mjs synchronously", async () => {
         const { cwd, tmp, config } = await getTemp(
           "babel-test-load-config-sync-babel.config.mjs",
         );
@@ -1142,9 +1193,13 @@ describe("buildConfigChain", function () {
 
         await config("babel.config.mjs");
 
-        expect(() => loadOptions({ filename, cwd })).toThrow(
-          /is only supported when running Babel asynchronously/,
-        );
+        expect(loadOptionsSync({ filename, cwd })).toEqual({
+          ...getDefaults(),
+          filename,
+          cwd,
+          root: cwd,
+          comments: true,
+        });
       });
 
       test.each([
@@ -1221,7 +1276,7 @@ describe("buildConfigChain", function () {
 
         await config(name);
 
-        expect(loadOptions({ filename, cwd })).toEqual({
+        expect(loadOptionsSync({ filename, cwd })).toEqual({
           ...getDefaults(),
           filename,
           cwd,
@@ -1230,7 +1285,7 @@ describe("buildConfigChain", function () {
         });
       });
 
-      test("should not load .babelrc.mjs synchronously", async () => {
+      nodeLt22_12("should not load .babelrc.mjs synchronously", async () => {
         const { cwd, tmp, config } = await getTemp(
           "babel-test-load-config-sync-.babelrc.mjs",
         );
@@ -1238,9 +1293,26 @@ describe("buildConfigChain", function () {
 
         await config(".babelrc.mjs");
 
-        expect(() => loadOptions({ filename, cwd })).toThrow(
+        expect(() => loadOptionsSync({ filename, cwd })).toThrow(
           /is only supported when running Babel asynchronously/,
         );
+      });
+
+      nodeGte22_12("should load .babelrc.mjs synchronously", async () => {
+        const { cwd, tmp, config } = await getTemp(
+          "babel-test-load-config-sync-.babelrc.mjs",
+        );
+        const filename = tmp("src.js");
+
+        await config(".babelrc.mjs");
+
+        expect(loadOptionsSync({ filename, cwd })).toEqual({
+          ...getDefaults(),
+          filename,
+          cwd,
+          root: cwd,
+          comments: true,
+        });
       });
 
       test.each(
@@ -1275,12 +1347,33 @@ describe("buildConfigChain", function () {
         );
       });
 
-      it("should load .babelignore", () => {
-        const filename = fixture("config-files", "babelignore", "src.js");
+      itBabel7("should load .babelignore", () => {
+        const loadOptions = name => {
+          const filename = fixture("config-files", "babelignore", name);
+          return loadOptionsSync({ filename, cwd: path.dirname(filename) });
+        };
 
-        expect(
-          loadOptions({ filename, cwd: path.dirname(filename) }),
-        ).toBeNull();
+        expect(loadOptions("src.js")).toBeNull();
+        expect(loadOptions("bar.js")).not.toBeNull();
+        expect(loadOptions("#baz.js")).not.toBeNull();
+
+        // This changes in Babel 8
+        expect(loadOptions("foo.js#.js")).not.toBeNull();
+        expect(loadOptions("foo.js")).toBeNull();
+      });
+
+      itBabel8("should load .babelignore", () => {
+        const loadOptions = name => {
+          const filename = fixture("config-files", "babelignore", name);
+          return loadOptionsSync({ filename, cwd: path.dirname(filename) });
+        };
+
+        expect(loadOptions("src.js")).toBeNull();
+        expect(loadOptions("bar.js")).not.toBeNull();
+        expect(loadOptions("#baz.js")).not.toBeNull();
+
+        expect(loadOptions("foo.js#.js")).toBeNull();
+        expect(loadOptions("foo.js")).not.toBeNull();
       });
 
       test.each(
@@ -1317,7 +1410,9 @@ describe("buildConfigChain", function () {
       it("should ignore package.json without a 'babel' property", () => {
         const filename = fixture("config-files", "pkg-ignored", "src.js");
 
-        expect(loadOptions({ filename, cwd: path.dirname(filename) })).toEqual({
+        expect(
+          loadOptionsSync({ filename, cwd: path.dirname(filename) }),
+        ).toEqual({
           ...getDefaults(),
           filename: filename,
           cwd: path.dirname(filename),
@@ -1353,11 +1448,14 @@ describe("buildConfigChain", function () {
         },
       );
 
-      it("loadPartialConfig should return a list of files that were extended", () => {
+      it("loadPartialConfigSync should return a list of files that were extended", () => {
         const filename = fixture("config-files", "babelrc-extended", "src.js");
 
         expect(
-          babel.loadPartialConfig({ filename, cwd: path.dirname(filename) }),
+          babel.loadPartialConfigSync({
+            filename,
+            cwd: path.dirname(filename),
+          }),
         ).toEqual({
           babelignore: fixture("config-files", ".babelignore"),
           babelrc: fixture("config-files", "babelrc-extended", ".babelrc"),
@@ -1378,19 +1476,22 @@ describe("buildConfigChain", function () {
         });
       });
 
-      it("loadPartialConfig should return null when ignored", () => {
+      it("loadPartialConfigSync should return null when ignored", () => {
         const filename = fixture("config-files", "babelignore", "src.js");
 
         expect(
-          babel.loadPartialConfig({ filename, cwd: path.dirname(filename) }),
+          babel.loadPartialConfigSync({
+            filename,
+            cwd: path.dirname(filename),
+          }),
         ).toBeNull();
       });
 
-      it("loadPartialConfig should return a list of files when ignored with showIgnoredFiles option", () => {
+      it("loadPartialConfigSync should return a list of files when ignored with showIgnoredFiles option", () => {
         const filename = fixture("config-files", "babelignore", "src.js");
 
         expect(
-          babel.loadPartialConfig({
+          babel.loadPartialConfigSync({
             filename,
             cwd: path.dirname(filename),
             showIgnoredFiles: true,
@@ -1412,12 +1513,12 @@ describe("buildConfigChain", function () {
         });
       });
 
-      it("loadPartialConfig can be called with no arguments", () => {
+      it("loadPartialConfigSync can be called with no arguments", () => {
         const cwd = process.cwd();
 
         try {
           process.chdir(fixture("config-files", "babelrc-extended"));
-          expect(() => babel.loadPartialConfig()).not.toThrow();
+          expect(() => babel.loadPartialConfigSync()).not.toThrow();
         } finally {
           process.chdir(cwd);
         }
@@ -1425,14 +1526,14 @@ describe("buildConfigChain", function () {
     });
 
     it("should throw when `test` presents but `filename` is not passed", () => {
-      expect(() => loadOptions({ test: /\.ts$/, plugins: [] })).toThrow(
+      expect(() => loadOptionsSync({ test: /\.ts$/, plugins: [] })).toThrow(
         /Configuration contains string\/RegExp pattern/,
       );
     });
 
     it("should throw when `preset` requires `filename` but it was not passed", () => {
       expect(() => {
-        loadOptions({
+        loadOptionsSync({
           presets: ["./fixtures/config-loading/preset4"],
         });
       }).toThrow(/Preset \/\* your preset \*\/ requires a filename/);
@@ -1440,7 +1541,7 @@ describe("buildConfigChain", function () {
 
     it("should throw when `preset.overrides` requires `filename` but it was not passed", () => {
       expect(() => {
-        loadOptions({
+        loadOptionsSync({
           presets: ["./fixtures/config-loading/preset5"],
         });
       }).toThrow(/Preset \/\* your preset \*\/ requires a filename/);
@@ -1453,7 +1554,7 @@ describe("buildConfigChain", function () {
         "babel.config.json",
       );
       expect(() => {
-        babel.loadPartialConfig({
+        babel.loadPartialConfigSync({
           filename,
           cwd: path.dirname(filename),
         });

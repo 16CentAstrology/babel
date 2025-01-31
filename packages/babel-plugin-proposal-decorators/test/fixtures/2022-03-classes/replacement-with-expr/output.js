@@ -1,8 +1,8 @@
-var _initClass, _Bar;
+let _initClass, _Bar;
 const dec = () => {};
 const Foo = (class Bar {
   static {
-    [_Bar, _initClass] = babelHelpers.applyDecs2203(this, [], [dec]);
+    [_Bar, _initClass] = babelHelpers.applyDecs2203R(this, [], [dec]).c;
   }
   bar = new _Bar();
   static {

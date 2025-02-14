@@ -1,20 +1,17 @@
 import { declare } from "@babel/helper-plugin-utils";
-import syntaxDestructuringPrivate from "@babel/plugin-syntax-destructuring-private";
 import {
   hasPrivateKeys,
   hasPrivateClassElement,
   transformPrivateKeyDestructuring,
   buildVariableDeclarationFromParams,
-} from "./util";
+} from "./util.ts";
 import { convertFunctionParams } from "@babel/plugin-transform-parameters";
 import { unshiftForXStatementBody } from "@babel/plugin-transform-destructuring";
 
-import type { PluginPass } from "@babel/core";
-import type { NodePath, Visitor } from "@babel/traverse";
-import type * as t from "@babel/types";
+import type { PluginPass, NodePath, Visitor, types as t } from "@babel/core";
 
 export default declare(function ({ assertVersion, assumption, types: t }) {
-  assertVersion("^7.17.0");
+  assertVersion(REQUIRED_VERSION("^7.17.0"));
   const {
     assignmentExpression,
     assignmentPattern,
@@ -99,7 +96,7 @@ export default declare(function ({ assertVersion, assumption, types: t }) {
         // transforms to:
         // for (const ref of cls) { const { #x: x } = ref; body; }
         // todo: the transform here assumes that any expression within
-        // the destructuring pattern (`{ #x: x }`), when evluated, do not interfere
+        // the destructuring pattern (`{ #x: x }`), when evaluated, do not interfere
         // with the iterator of cls. Otherwise we have to pause the iterator and
         // interleave the expressions.
         // See also https://gist.github.com/nicolo-ribaudo/f8ac7916f89450f2ead77d99855b2098
@@ -138,7 +135,7 @@ export default declare(function ({ assertVersion, assumption, types: t }) {
       const newDeclarations = [];
       for (const declarator of declarations) {
         for (const { left, right } of transformPrivateKeyDestructuring(
-          // @ts-expect-error The id of a variable declarator must not be a RestElement
+          // @ts-ignore(Babel 7 vs Babel 8) The id of a variable declarator must not be a RestElement
           declarator.id,
           declarator.init,
           scope,
@@ -148,7 +145,12 @@ export default declare(function ({ assertVersion, assumption, types: t }) {
           objectRestNoSymbols,
           /* useBuiltIns */ true,
         )) {
-          newDeclarations.push(variableDeclarator(left, right));
+          newDeclarations.push(
+            variableDeclarator(
+              left as t.Identifier | t.ArrayPattern | t.ObjectPattern,
+              right,
+            ),
+          );
         }
       }
       node.declarations = newDeclarations;
@@ -212,7 +214,7 @@ export default declare(function ({ assertVersion, assumption, types: t }) {
 
   return {
     name: "proposal-destructuring-private",
-    inherits: syntaxDestructuringPrivate,
+    manipulateOptions: (_, p) => p.plugins.push("destructuringPrivate"),
     visitor: visitor,
   };
 });

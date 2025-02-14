@@ -1,5 +1,5 @@
-import { types as t, type PluginPass } from "@babel/core";
-import type { Binding, NodePath } from "@babel/traverse";
+import { types as t } from "@babel/core";
+import type { Scope, NodePath, PluginPass } from "@babel/core";
 
 export function validateUsage(
   path: NodePath<t.VariableDeclaration>,
@@ -10,6 +10,8 @@ export function validateUsage(
 
   for (const name of Object.keys(path.getBindingIdentifiers())) {
     const binding = path.scope.getBinding(name);
+    // binding may be null. ref: https://github.com/babel/babel/issues/15300
+    if (!binding) continue;
     if (tdzEnabled) {
       if (injectTDZChecks(binding, state)) dynamicTDZNames.push(name);
     }
@@ -23,7 +25,7 @@ export function validateUsage(
 
 function disallowConstantViolations(
   name: string,
-  binding: Binding,
+  binding: Scope.Binding,
   state: PluginPass,
 ) {
   for (const violation of binding.constantViolations) {
@@ -74,7 +76,9 @@ function disallowConstantViolations(
             t.variableDeclarator(violation.scope.generateUidIdentifier(name)),
           ]),
         );
-      violation.node.body.body.unshift(t.expressionStatement(throwNode));
+      (violation.node.body as t.BlockStatement).body.unshift(
+        t.expressionStatement(throwNode),
+      );
     }
   }
 }
@@ -131,9 +135,9 @@ function getTDZReplacement(
   if (skipTDZChecks.has(id)) return;
   skipTDZChecks.add(id);
 
-  const bindingPath = path.scope.getBinding(id.name).path;
+  const bindingPath = path.scope.getBinding(id.name)?.path;
 
-  if (bindingPath.isFunctionDeclaration()) return;
+  if (!bindingPath || bindingPath.isFunctionDeclaration()) return;
 
   const status = getTDZStatus(path, bindingPath);
   if (status === "outside") return;
@@ -147,7 +151,7 @@ function getTDZReplacement(
   return { status, node: buildTDZAssert(status, id, state) };
 }
 
-function injectTDZChecks(binding: Binding, state: PluginPass) {
+function injectTDZChecks(binding: Scope.Binding, state: PluginPass) {
   const allUsages = new Set(binding.referencePaths);
   binding.constantViolations.forEach(allUsages.add, allUsages);
 
@@ -173,7 +177,9 @@ function injectTDZChecks(binding: Binding, state: PluginPass) {
       }
     } else if (path.isAssignmentExpression()) {
       const nodes = [];
-      const ids = path.getBindingIdentifiers();
+      const ids = process.env.BABEL_8_BREAKING
+        ? path.getAssignmentIdentifiers()
+        : path.getBindingIdentifiers();
 
       for (const name of Object.keys(ids)) {
         const replacement = getTDZReplacement(path, state, ids[name]);

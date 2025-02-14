@@ -1,35 +1,45 @@
-import type SourceMap from "./source-map";
+import type SourceMap from "./source-map.ts";
+
+// We inline this package
+// eslint-disable-next-line import/no-extraneous-dependencies
 import * as charcodes from "charcodes";
 
 export type Pos = {
   line: number;
   column: number;
+  index: number;
 };
 export type Loc = {
   start?: Pos;
   end?: Pos;
-  identifierName?: string;
   filename?: string;
 };
 type SourcePos = {
-  identifierName: string | undefined;
   line: number | undefined;
   column: number | undefined;
+  identifierName: string | undefined;
   filename: string | undefined;
 };
+type InternalSourcePos = SourcePos & { identifierNamePos: Pos };
 
 type QueueItem = {
   char: number;
   repeat: number;
   line: number | undefined;
   column: number | undefined;
-  identifierName: string | undefined;
+  identifierName: undefined; // Not used, it always undefined.
+  identifierNamePos: undefined; // Not used, it always undefined.
   filename: string | undefined;
 };
 
 export default class Buffer {
-  constructor(map?: SourceMap | null) {
+  constructor(map: SourceMap | null, indentChar: string) {
     this._map = map;
+    this._indentChar = indentChar;
+
+    for (let i = 0; i < 64; i++) {
+      this._fastIndentations.push(indentChar.repeat(i));
+    }
 
     this._allocQueue();
   }
@@ -41,13 +51,17 @@ export default class Buffer {
   _last = 0;
   _queue: QueueItem[] = [];
   _queueCursor = 0;
+  _canMarkIdName = true;
+  _indentChar = "";
+  _fastIndentations: string[] = [];
 
   _position = {
     line: 1,
     column: 0,
   };
-  _sourcePosition: SourcePos = {
+  _sourcePosition: InternalSourcePos = {
     identifierName: undefined,
+    identifierNamePos: undefined,
     line: undefined,
     column: undefined,
     filename: undefined,
@@ -63,6 +77,7 @@ export default class Buffer {
         line: undefined,
         column: undefined,
         identifierName: undefined,
+        identifierNamePos: undefined,
         filename: "",
       });
     }
@@ -73,7 +88,6 @@ export default class Buffer {
     repeat: number,
     line: number | undefined,
     column: number | undefined,
-    identifierName: string | undefined,
     filename: string | undefined,
   ) {
     const cursor = this._queueCursor;
@@ -85,7 +99,6 @@ export default class Buffer {
     item.repeat = repeat;
     item.line = line;
     item.column = column;
-    item.identifierName = identifierName;
     item.filename = filename;
 
     this._queueCursor++;
@@ -112,7 +125,12 @@ export default class Buffer {
       code: (this._buf + this._str).trimRight(),
       // Decoded sourcemap is free to generate.
       decodedMap: map?.getDecoded(),
-
+      // Used as a marker for backwards compatibility. We moved input map merging
+      // into the generator. We cannot merge the input map a second time, so the
+      // presence of this field tells us we've already done the work.
+      get __mergedMap() {
+        return this.map;
+      },
       // Encoding the sourcemap is moderately CPU expensive.
       get map() {
         const resultMap = map ? map.get() : null;
@@ -173,16 +191,16 @@ export default class Buffer {
       1,
       sourcePosition.line,
       sourcePosition.column,
-      sourcePosition.identifierName,
       sourcePosition.filename,
     );
   }
 
   /**
-   * Same as queue, but this indentation will never have a sourcmap marker.
+   * Same as queue, but this indentation will never have a sourcemap marker.
    */
-  queueIndentation(char: number, repeat: number): void {
-    this._pushQueue(char, repeat, undefined, undefined, undefined, undefined);
+  queueIndentation(repeat: number): void {
+    if (repeat === 0) return;
+    this._pushQueue(-1, repeat, undefined, undefined, undefined);
   }
 
   _flush(): void {
@@ -195,19 +213,34 @@ export default class Buffer {
     this._queueCursor = 0;
   }
 
-  _appendChar(char: number, repeat: number, sourcePos: SourcePos): void {
+  _appendChar(
+    char: number,
+    repeat: number,
+    sourcePos: InternalSourcePos,
+  ): void {
     this._last = char;
 
-    this._str +=
-      repeat > 1
-        ? String.fromCharCode(char).repeat(repeat)
-        : String.fromCharCode(char);
+    if (char === -1) {
+      const fastIndentation = this._fastIndentations[repeat];
+      if (fastIndentation !== undefined) {
+        this._str += fastIndentation;
+      } else {
+        this._str +=
+          repeat > 1 ? this._indentChar.repeat(repeat) : this._indentChar;
+      }
+    } else {
+      this._str +=
+        repeat > 1
+          ? String.fromCharCode(char).repeat(repeat)
+          : String.fromCharCode(char);
+    }
 
     if (char !== charcodes.lineFeed) {
       this._mark(
         sourcePos.line,
         sourcePos.column,
         sourcePos.identifierName,
+        sourcePos.identifierNamePos,
         sourcePos.filename,
       );
       this._position.column += repeat;
@@ -215,15 +248,25 @@ export default class Buffer {
       this._position.line++;
       this._position.column = 0;
     }
+
+    if (this._canMarkIdName) {
+      sourcePos.identifierName = undefined;
+      sourcePos.identifierNamePos = undefined;
+    }
   }
 
-  _append(str: string, sourcePos: SourcePos, maybeNewline: boolean): void {
+  _append(
+    str: string,
+    sourcePos: InternalSourcePos,
+    maybeNewline: boolean,
+  ): void {
     const len = str.length;
     const position = this._position;
 
     this._last = str.charCodeAt(len - 1);
 
     if (++this._appendCount > 4096) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       +this._str; // Unexplainable huge performance boost. Ref: https://github.com/davidmarkclements/flatstr License: MIT
       this._buf += this._str;
       this._str = str;
@@ -237,8 +280,16 @@ export default class Buffer {
       return;
     }
 
-    const { column, identifierName, filename } = sourcePos;
+    const { column, identifierName, identifierNamePos, filename } = sourcePos;
     let line = sourcePos.line;
+
+    if (
+      (identifierName != null || identifierNamePos != null) &&
+      this._canMarkIdName
+    ) {
+      sourcePos.identifierName = undefined;
+      sourcePos.identifierNamePos = undefined;
+    }
 
     // Search for newline chars. We search only for `\n`, since both `\r` and
     // `\r\n` are normalized to `\n` during parse. We exclude `\u2028` and
@@ -250,10 +301,10 @@ export default class Buffer {
     // If the string starts with a newline char, then adding a mark is redundant.
     // This catches both "no newlines" and "newline after several chars".
     if (i !== 0) {
-      this._mark(line, column, identifierName, filename);
+      this._mark(line, column, identifierName, identifierNamePos, filename);
     }
 
-    // Now, find each reamining newline char in the string.
+    // Now, find each remaining newline char in the string.
     while (i !== -1) {
       position.line++;
       position.column = 0;
@@ -261,8 +312,9 @@ export default class Buffer {
 
       // We mark the start of each line, which happens directly after this newline char
       // unless this is the last char.
-      if (last < len) {
-        this._mark(++line, 0, identifierName, filename);
+      // When manually adding multi-line content (such as a comment), `line` will be `undefined`.
+      if (last < len && line !== undefined) {
+        this._mark(++line, 0, null, null, filename);
       }
       i = str.indexOf("\n", last);
     }
@@ -273,9 +325,17 @@ export default class Buffer {
     line: number | undefined,
     column: number | undefined,
     identifierName: string | undefined,
+    identifierNamePos: Pos | undefined,
     filename: string | undefined,
   ): void {
-    this._map?.mark(this._position, line, column, identifierName, filename);
+    this._map?.mark(
+      this._position,
+      line,
+      column,
+      identifierName,
+      identifierNamePos,
+      filename,
+    );
   }
 
   removeTrailingNewline(): void {
@@ -324,9 +384,6 @@ export default class Buffer {
 
   /**
    * check if current _last + queue ends with newline, return the character before newline
-   *
-   * @param {*} ch
-   * @memberof Buffer
    */
   endsWithCharAndNewline(): number {
     const queue = this._queue;
@@ -373,12 +430,26 @@ export default class Buffer {
    * over "();", where previously it would have been a single mapping.
    */
   exactSource(loc: Loc | undefined, cb: () => void) {
-    if (!this._map) return cb();
+    if (!this._map) {
+      cb();
+      return;
+    }
 
     this.source("start", loc);
-
+    // @ts-expect-error identifierName is not defined
+    const identifierName = loc.identifierName;
+    const sourcePos = this._sourcePosition;
+    if (identifierName) {
+      this._canMarkIdName = false;
+      sourcePos.identifierName = identifierName;
+    }
     cb();
 
+    if (identifierName) {
+      this._canMarkIdName = true;
+      sourcePos.identifierName = undefined;
+      sourcePos.identifierNamePos = undefined;
+    }
     this.source("end", loc);
   }
 
@@ -390,48 +461,29 @@ export default class Buffer {
   source(prop: "start" | "end", loc: Loc | undefined): void {
     if (!this._map) return;
 
-    // Since this is called extremely often, we re-use the same _sourcePosition
+    // Since this is called extremely often, we reuse the same _sourcePosition
     // object for the whole lifetime of the buffer.
-    this._normalizePosition(prop, loc, 0, 0);
+    this._normalizePosition(prop, loc, 0);
   }
 
   sourceWithOffset(
     prop: "start" | "end",
     loc: Loc | undefined,
-    lineOffset: number,
     columnOffset: number,
   ): void {
     if (!this._map) return;
 
-    this._normalizePosition(prop, loc, lineOffset, columnOffset);
+    this._normalizePosition(prop, loc, columnOffset);
   }
 
-  /**
-   * Call a callback with a specific source location
-   */
-
-  withSource(prop: "start" | "end", loc: Loc, cb: () => void): void {
-    if (!this._map) return cb();
-
-    this.source(prop, loc);
-
-    cb();
-  }
-
-  _normalizePosition(
-    prop: "start" | "end",
-    loc: Loc,
-    lineOffset: number,
-    columnOffset: number,
-  ) {
+  _normalizePosition(prop: "start" | "end", loc: Loc, columnOffset: number) {
     const pos = loc[prop];
     const target = this._sourcePosition;
 
-    target.identifierName =
-      (prop === "start" && loc.identifierName) || undefined;
     if (pos) {
-      target.line = pos.line + lineOffset;
-      target.column = pos.column + columnOffset;
+      target.line = pos.line;
+      // TODO: Fix https://github.com/babel/babel/issues/15712 in downstream
+      target.column = Math.max(pos.column + columnOffset, 0);
       target.filename = loc.filename;
     }
   }

@@ -1,4 +1,5 @@
-import toNodeDescription from "./to-node-description";
+import type { ParseErrorTemplates } from "../parse-error.ts";
+import toNodeDescription from "./to-node-description.ts";
 
 export type LValAncestor =
   | { type: "UpdateExpression"; prefix: boolean }
@@ -14,6 +15,7 @@ export type LValAncestor =
         | "ImportSpecifier"
         | "ImportNamespaceSpecifier"
         | "ImportDefaultSpecifier"
+        | "ParenthesizedExpression"
         | "ObjectPattern"
         | "RestElement"
         | "VariableDeclarator";
@@ -32,13 +34,15 @@ export default {
     "Can not use 'await' as identifier inside a static block.",
   AwaitExpressionFormalParameter:
     "'await' is not allowed in async function parameters.",
+  AwaitUsingNotInAsyncContext:
+    "'await using' is only allowed within async functions and at the top levels of modules.",
   AwaitNotInAsyncContext:
     "'await' is only allowed within async functions and at the top levels of modules.",
   AwaitNotInAsyncFunction: "'await' is only allowed within async functions.",
-  BadGetterArity: "A 'get' accesor must not have any formal parameters.",
-  BadSetterArity: "A 'set' accesor must have exactly one formal parameter.",
+  BadGetterArity: "A 'get' accessor must not have any formal parameters.",
+  BadSetterArity: "A 'set' accessor must have exactly one formal parameter.",
   BadSetterRestParameter:
-    "A 'set' accesor function argument must not be a rest parameter.",
+    "A 'set' accessor function argument must not be a rest parameter.",
   ConstructorClassField: "Classes may not have a field named 'constructor'.",
   ConstructorClassPrivateField:
     "Classes may not have a private field named '#constructor'.",
@@ -48,18 +52,22 @@ export default {
   DeclarationMissingInitializer: ({
     kind,
   }: {
-    kind: "const" | "destructuring";
+    kind: "await using" | "const" | "destructuring" | "using";
   }) => `Missing initializer in ${kind} declaration.`,
   DecoratorArgumentsOutsideParentheses:
     "Decorator arguments must be moved inside parentheses: use '@(decorator(args))' instead of '@(decorator)(args)'.",
   DecoratorBeforeExport:
-    "Decorators must be placed *before* the 'export' keyword. You can set the 'decoratorsBeforeExport' option to false to use the 'export @decorator class {}' syntax.",
+    "Decorators must be placed *before* the 'export' keyword. Remove the 'decoratorsBeforeExport: true' option to use the 'export @decorator class {}' syntax.",
+  DecoratorsBeforeAfterExport:
+    "Decorators can be placed *either* before or after the 'export' keyword, but not in both locations at the same time.",
   DecoratorConstructor:
     "Decorators can't be used with a constructor. Did you mean '@dec class { ... }'?",
   DecoratorExportClass:
-    "Using the export keyword between a decorator and a class is not allowed. Please use `export @dec class` instead.",
+    "Decorators must be placed *after* the 'export' keyword. Remove the 'decoratorsBeforeExport: false' option to use the '@decorator export class {}' syntax.",
   DecoratorSemicolon: "Decorators must not be followed by a semicolon.",
   DecoratorStaticBlock: "Decorators can't be used with a static block.",
+  DeferImportRequiresNamespace:
+    'Only `import defer * as x from "./module"` is valid.',
   DeletePrivateField: "Deleting a private field is not allowed.",
   DestructureNamedImport:
     "ES2015 named imports do not destructure. Use another statement for destructuring after the import.",
@@ -69,6 +77,8 @@ export default {
     `\`${exportName}\` has already been exported. Exported identifiers must be unique.`,
   DuplicateProto: "Redefinition of __proto__ property.",
   DuplicateRegExpFlags: "Duplicate regular expression flag.",
+  DynamicImportPhaseRequiresImportExpressions: ({ phase }: { phase: string }) =>
+    `'import.${phase}(...)' can only be parsed when using the 'createImportExpressions' option.`,
   ElementAfterRest: "Rest element must be last element.",
   EscapedCharNotAnIdentifier: "Invalid Unicode escape.",
   ExportBindingIsString: ({
@@ -106,14 +116,11 @@ export default {
   IllegalLanguageModeDirective:
     "Illegal 'use strict' directive in function with non-simple parameter list.",
   IllegalReturn: "'return' outside of function.",
+  ImportAttributesUseAssert:
+    "The `assert` keyword in import attributes is deprecated and it has been replaced by the `with` keyword. You can enable the `deprecatedImportAssert` parser plugin to suppress this error.",
   ImportBindingIsString: ({ importName }: { importName: string }) =>
     `A string literal cannot be used as an imported binding.\n- Did you mean \`import { "${importName}" as foo }\`?`,
-  ImportCallArgumentTrailingComma:
-    "Trailing comma is disallowed inside import(...) arguments.",
-  ImportCallArity: ({ maxArgumentCount }: { maxArgumentCount: 1 | 2 }) =>
-    `\`import()\` requires exactly ${
-      maxArgumentCount === 1 ? "one argument" : "one or two arguments"
-    }.`,
+  ImportCallArity: `\`import()\` requires exactly one or two arguments.`,
   ImportCallNotNewExpression: "Cannot use new with import(...).",
   ImportCallSpreadArgument: "`...` is not allowed in `import()`.",
   ImportJSONBindingNotDefault:
@@ -139,6 +146,10 @@ export default {
     `Invalid left-hand side in ${toNodeDescription(ancestor)}.`,
   InvalidLhsBinding: ({ ancestor }: { ancestor: LValAncestor }) =>
     `Binding invalid left-hand side in ${toNodeDescription(ancestor)}.`,
+  InvalidLhsOptionalChaining: ({ ancestor }: { ancestor: LValAncestor }) =>
+    `Invalid optional chaining in the left-hand side of ${toNodeDescription(
+      ancestor,
+    )}.`,
   InvalidNumber: "Invalid number.",
   InvalidOrMissingExponent:
     "Floating-point numbers require a valid exponent after the 'e'.",
@@ -156,8 +167,7 @@ export default {
   InvalidRestAssignmentPattern: "Invalid rest operator's argument.",
   LabelRedeclaration: ({ labelName }: { labelName: string }) =>
     `Label '${labelName}' is already declared.`,
-  LetInLexicalBinding:
-    "'let' is not allowed to be used as a name in 'let' or 'const' declarations.",
+  LetInLexicalBinding: "'let' is disallowed as a lexically bound name.",
   LineTerminatorBeforeArrow: "No line break is allowed before '=>'.",
   MalformedRegExpFlags: "Invalid regular expression flag.",
   MissingClassName: "A class name is required.",
@@ -223,7 +233,11 @@ export default {
   RecordNoProto: "'__proto__' is not allowed in Record expressions.",
   RestTrailingComma: "Unexpected trailing comma after rest element.",
   SloppyFunction:
+    "In non-strict mode code, functions can only be declared at top level or inside a block.",
+  SloppyFunctionAnnexB:
     "In non-strict mode code, functions can only be declared at top level, inside a block, or as the body of an if statement.",
+  SourcePhaseImportRequiresDefault:
+    'Only `import source x from "./module"` is valid.',
   StaticPrototype: "Classes may not have static property named prototype.",
   SuperNotAllowed:
     "`super()` is only valid inside a class constructor of a subclass. Maybe a typo in the method name ('constructor') or not extending another class?",
@@ -294,6 +308,7 @@ export default {
   UnterminatedRegExp: "Unterminated regular expression.",
   UnterminatedString: "Unterminated string constant.",
   UnterminatedTemplate: "Unterminated template.",
+  UsingDeclarationExport: "Using declaration cannot be exported.",
   UsingDeclarationHasBindingPattern:
     "Using declaration cannot have destructuring patterns.",
   VarRedeclaration: ({ identifierName }: { identifierName: string }) =>
@@ -303,4 +318,4 @@ export default {
   YieldInParameter: "Yield expression is not allowed in formal parameters.",
   ZeroDigitNumericSeparator:
     "Numeric separator can not be used after leading 0.",
-};
+} satisfies ParseErrorTemplates;
